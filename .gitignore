@@ -1,0 +1,8 @@
+# Ignore target directory
+target/
+
+# Ignore .DS_Store file
+.DS_Store
+
+# Environment file
+.env
