@@ -4,56 +4,18 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-# actix-web for web server
 actix-web = "4.9"
-
-# actix-rt for runtime
-actix-rt = "2.10"
-
-# serde for serialization
-serde = { version = "1.0.210", features = ["derive"] }
-
-# serde_json for json serialization
+actix-service = "2.0"
+actix-session = { version = "0.10", features = ["cookie-session"] }
+actix-web-httpauth = "0.8"
 serde_json = "1.0"
-
-# diesel for database
-diesel = { version = "2.2.4", features = ["postgres", "r2d2"] }
-
-# tokio for async
-tokio = { version = "1.40.0", features = ["full"] }
-
-# futures for async
-futures = "0.3.30"
-
-# jsonwebtoken for jwt
-jsonwebtoken = "9.3.0"
-
-# bcrypt for password hashing
-bcrypt = "0.15.1"
-
-# validator for validation
-validator = "0.18.1"
-
-# lazy_static for lazy statics
-lazy_static = "1.5.0"
-
-# uuid for unique id
-uuid = { version = "1.10.0", features = ["v4", "serde"] }
-
-# chrono for date time
-chrono = { version = "0.4.38", features = ["serde"] }
-
-# derive_more for more derive macros
-derive_more = { version = "1.0.0", features = ["display", "from"] }
-
-# dotenv for environment variables
-dotenv = "0.15.0"
-
-# dotenvy for environment variables
-dotenvy = "0.15.7"
-
-# env_logger for logging
-env_logger = "0.11.5"
-
-# log for logging
-log = "0.4.22"
+serde = { version = "1.0", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.10", features = ["v4", "serde"] }
+diesel = { version = "2.2", features = ["postgres", "r2d2", "chrono", "uuid"] }
+dotenvy = "0.15"
+env_logger = "0.11"
+jsonwebtoken = "9.3"
+bcrypt = "0.15"
+validator = "0.18"
+lazy_static = "1.5"

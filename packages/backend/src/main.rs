@@ -1,40 +1,50 @@
 // src/main.rs
-// @TODO: Move Database related code to a separate module.
-use actix_web::{web, App, HttpServer};
-use diesel::r2d2::{self, ConnectionManager};
-use diesel::PgConnection;
-use dotenvy::dotenv;
-use std::env;
-use std::io;
-
-// Load Modules
+// Load the modules in the main.rs file
 mod handlers;
 mod models;
+mod repositories;
+mod schema;
+mod services;
+mod utils;
 
-// Define a DbPool type alias
-type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
+use actix_web::dev::ServiceRequest;
+use actix_web::{middleware::Logger, web, App, Error, HttpMessage, HttpServer};
+use actix_web_httpauth::extractors::bearer::BearerAuth;
+use actix_web_httpauth::middleware::HttpAuthentication;
+use repositories::database::establish_connection;
+use utils::auth::validate_token;
+
+async fn validator(
+    req: ServiceRequest,
+    credentials: BearerAuth,
+) -> Result<ServiceRequest, (Error, ServiceRequest)> {
+    match validate_token(credentials.token()) {
+        Ok(claims) => {
+            // Attach the claims to the request extensions
+            req.extensions_mut().insert(claims);
+            Ok(req)
+        }
+        Err(_) => {
+            let error = actix_web::error::ErrorUnauthorized("Invalid Token");
+            Err((error, req))
+        }
+    }
+}
 
 #[actix_web::main]
-async fn main() -> Result<()> {
-    // Load environment variables from .env file
-    dotenvy().ok();
+async fn main() -> std::io::Result<()> {
+    dotenvy::dotenv().ok();
+    env_logger::init();
+    let pool = establish_connection();
 
-    // Get DATABASE_URL from environment variables
-    let database_url = env::var("DATABASE_URL")?;
-
-    // Create a connection manager
-    let manager = ConnectionManager::<PgConnection>::new(database_url);
-
-    // Create a connection pool
-    let pool: DbPool = r2d2::Pool::builder()
-        .build(manager)
-        .expect("Failed to create pool.");
-
-    // Start the HTTP server
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(pool.clone()))
-            .configure(handlers::routes)
+            .wrap(Logger::default())
+            .service(web::scope("/auth").configure(handlers::auth::auth_routes))
+            .service(
+                web::scope("/user").wrap(HttpAuthentication::bearer(validator)), // Add protected routes here
+            )
     })
     .bind("127.0.0.1:8080")?
     .run()

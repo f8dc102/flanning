@@ -6,4 +6,4 @@ file = "src/schema.rs"
 custom_type_derives = ["diesel::query_builder::QueryId", "Clone"]
 
 [migrations_directory]
-dir = "/home/f8dc916/devel/projects/flanningApp/packages/backend/migrations"
+dir = "/home/f8dc916/devel/projects/flanning-app/packages/backend/migrations"

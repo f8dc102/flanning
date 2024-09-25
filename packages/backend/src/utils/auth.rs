@@ -1,79 +1,43 @@
 // src/utils/auth.rs
-use actix_web::dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform};
-use actix_web::{Error, HttpMessage};
-use futures::future::{ok, Ready, LocalBoxFuture};
-use crate::services::auth_service::AuthService;
+use chrono::{Duration, Utc};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
+use std::env;
 use uuid::Uuid;
 
-pub struct Auth;
-
-impl<S, B> Transform<S, ServiceRequest> for Auth
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    B: 'static,
-{
-    type Response = ServiceResponse<B>;
-    type Error = Error;
-    type Transform = AuthMiddleware<S>;
-    type InitError = ();
-    type Future = Ready<Result<Self::Transform, Self::InitError>>;
-
-    fn new_transform(&self, service: S) -> Self::Future {
-        ok(AuthMiddleware { service })
-    }
+lazy_static! {
+    static ref SECRET_KEY: String =
+        env::var("SECRET_KEY").unwrap_or_else(|_| "some_secret".repeat(8));
 }
 
-pub struct AuthMiddleware<S> {
-    service: S,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: Uuid,
+    pub exp: usize,
 }
 
-impl<S, B> Service<ServiceRequest> for AuthMiddleware<S>
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    B: 'static,
-{
-    type Response = ServiceResponse<B>;
-    type Error = Error;
-    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
-
-    forward_ready!(service);
-
-    fn call(&self, req: ServiceRequest) -> Self::Future {
-        let token = req
-            .headers()
-            .get("Authorization")
-            .and_then(|h| h.to_str().ok())
-            .and_then(|s| s.strip_prefix("Bearer "))
-            .map(|s| s.to_owned());
-
-        if let Some(token) = token {
-            match AuthService::verify_token(&token) {
-                Ok(claims) => {
-                    req.extensions_mut().insert(AuthGuard {
-                        user_id: Uuid::parse_str(&claims.sub).unwrap(),
-                    });
-                    let fut = self.service.call(req);
-                    Box::pin(async move {
-                        let res = fut.await?;
-                        Ok(res)
-                    })
-                }
-                Err(_) => Box::pin(async move {
-                    Ok(req.into_response(
-                        actix_web::HttpResponse::Unauthorized().finish().into_body(),
-                    ))
-                }),
-            }
-        } else {
-            Box::pin(async move {
-                Ok(req.into_response(
-                    actix_web::HttpResponse::Unauthorized().finish().into_body(),
-                ))
-            })
-        }
-    }
+pub fn create_token(user_id: Uuid) -> Result<String, jsonwebtoken::errors::Error> {
+    let expiration = Utc::now()
+        .checked_add_signed(Duration::hours(24))
+        .expect("valid timestamp")
+        .timestamp() as usize;
+    let claims = Claims {
+        sub: user_id,
+        exp: expiration,
+    };
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(SECRET_KEY.as_ref()),
+    )
 }
 
-pub struct AuthGuard {
-    pub user_id: Uuid,
+pub fn validate_token(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
+    decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(SECRET_KEY.as_ref()),
+        &Validation::default(),
+    )
+    .map(|data| data.claims)
 }
