@@ -1,0 +1,3 @@
+[submodule "packages/packages/frontend"]
+	path = packages/packages/frontend
+	url = git@github.com:YonseiDOIT/Flanning.git
