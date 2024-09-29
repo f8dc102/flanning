@@ -1,12 +1,10 @@
 [workspace]
 members = [
   "lambdas/auth",
-  "lambdas/friend",
-  "lambdas/itinerary",
-  "lambdas/planner",
-  "lambdas/review",
   "libs/models",
   "libs/repositories",
   "libs/services",
   "libs/utils",
 ]
+
+resolver = "2"

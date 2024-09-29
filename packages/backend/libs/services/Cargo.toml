@@ -4,3 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+utils = { path = "../utils" }
+uuid = { version = "1.10", features = ["v4"] }
+tokio = { version = "1.40", features = ["full"] }
+
+models = { path = "../models" }
+repositories = { path = "../repositories" }
